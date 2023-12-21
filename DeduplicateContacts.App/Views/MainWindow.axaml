@@ -16,10 +16,21 @@
 	</Design.DataContext>
 
 	<Grid RowDefinitions="Auto,*"
+		  ColumnDefinitions="*,3*"
 		  HorizontalAlignment="Stretch"
 		  VerticalAlignment="Stretch">
 		<Button Command="{Binding GetContactsCommand}" Content="Get Contacts" />
-		<DataGrid Grid.Row="1" ItemsSource="{Binding Contacts}" AutoGenerateColumns="true"
+		<ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Groups}"
+				 SelectedItem="{Binding SelectedGroup}"
+				 HorizontalAlignment="Stretch"
+				 VerticalAlignment="Stretch">
+			<ListBox.ItemTemplate>
+				<DataTemplate>
+					<TextBlock Text="{Binding Key}" />
+				</DataTemplate>
+			</ListBox.ItemTemplate>
+		</ListBox>
+		<DataGrid Grid.Row="1" Grid.Column="1" ItemsSource="{Binding SelectedContacts}" AutoGenerateColumns="true"
 				  HorizontalAlignment="Stretch"
 				  VerticalAlignment="Stretch">
 			
