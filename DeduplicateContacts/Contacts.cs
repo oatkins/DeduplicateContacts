@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using Azure.Core;
 using Microsoft.Graph;
 using Microsoft.Graph.Me.Contacts;
 using Microsoft.Graph.Models;
@@ -9,11 +8,47 @@ using Microsoft.Kiota.Abstractions.Authentication;
 
 namespace DeduplicateContacts;
 
+public record ContactSummary(string? DisplayName, string? EmailAddresses, string? Phone, string? HomePhone, string? LastName, string? FirstName, string Id, string ParentFolderId, DateTimeOffset? CreatedDate, DateTimeOffset? UpdatedDate)
+{
+    public ContactSummary(Contact c)
+        : this(
+              c.DisplayName,
+              c.EmailAddresses == null ? null : string.Join(", ", c.EmailAddresses.Select(x => x.Address)),
+              c.MobilePhone,
+              c.HomePhones == null ? null : string.Join(", ", c.HomePhones),
+              c.Surname,
+              c.GivenName,
+              c.Id ?? string.Empty,
+              c.ParentFolderId ?? string.Empty,
+              c.CreatedDateTime,
+              c.LastModifiedDateTime)
+    { 
+    }
+}
+
 public class Contacts(AuthenticationResult authenticationResult)
 {
     private readonly GraphServiceClient _client = new(new CompletedAuthenticationProvider(authenticationResult));
 
-    public async IAsyncEnumerable<Contact> GetContactsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async Task DeleteContactsAsync(IEnumerable<ContactSummary> contacts, CancellationToken cancellationToken)
+    {
+        var folders = await _client.Me.ContactFolders.GetAsync(null, cancellationToken);
+
+        foreach (var c in contacts)
+        {
+            var folder = folders?.Value?.FirstOrDefault(f => f.Id == c.ParentFolderId);
+            if (folder == null)
+            {
+                await _client.Me.Contacts[c.Id].DeleteAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                await _client.Me.ContactFolders[folder.Id].Contacts[c.Id].DeleteAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    public async IAsyncEnumerable<ContactSummary> GetContactsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var folders = await _client.Me.ContactFolders.GetAsync(null, cancellationToken);
 
@@ -22,7 +57,7 @@ public class Contacts(AuthenticationResult authenticationResult)
 
         requests = requests.Prepend(_client.Me.Contacts);
 
-        foreach(var request in requests)
+        foreach (var request in requests)
         {
             await foreach (var contact in GetContactsAsync(request, cancellationToken))
             {
@@ -31,7 +66,7 @@ public class Contacts(AuthenticationResult authenticationResult)
         }
     }
 
-    public async IAsyncEnumerable<Contact> GetContactsAsync(ContactsRequestBuilder request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<ContactSummary> GetContactsAsync(ContactsRequestBuilder request, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var contacts = await request.GetAsync(null, cancellationToken).ConfigureAwait(false);
         if (contacts?.Value == null)
@@ -39,9 +74,14 @@ public class Contacts(AuthenticationResult authenticationResult)
             yield break;
         }
 
+        var ids = new HashSet<string>();
+
         foreach (var contact in contacts.Value)
         {
-            yield return contact;
+            if (contact.Id != null && ids.Add(contact.Id))
+            {
+                yield return new(contact);
+            }
         }
 
         while (contacts?.OdataNextLink != null)
@@ -49,7 +89,10 @@ public class Contacts(AuthenticationResult authenticationResult)
             contacts = await _client.Me.Contacts.WithUrl(contacts.OdataNextLink).GetAsync(null, cancellationToken).ConfigureAwait(false);
             foreach (var contact in contacts?.Value ?? Enumerable.Empty<Contact>())
             {
-                yield return contact;
+                if (contact.Id != null && ids.Add(contact.Id))
+                {
+                    yield return new(contact);
+                }
             }
         }
     }

@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:DeduplicateContacts.App.ViewModels"
+		xmlns:view="using:DeduplicateContacts.App.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
@@ -19,21 +20,28 @@
 		  ColumnDefinitions="*,3*"
 		  HorizontalAlignment="Stretch"
 		  VerticalAlignment="Stretch">
-		<Button Command="{Binding GetContactsCommand}" Content="Get Contacts" />
+		<StackPanel Orientation="Horizontal">
+			<Button Command="{Binding GetContactsCommand}" Content="Get Contacts" />
+			<Button Command="{Binding RemoveContactsCommand}" Content="Delete" />
+		</StackPanel>
 		<ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Groups}"
 				 SelectedItem="{Binding SelectedGroup}"
 				 HorizontalAlignment="Stretch"
 				 VerticalAlignment="Stretch">
 			<ListBox.ItemTemplate>
 				<DataTemplate>
-					<TextBlock Text="{Binding Key}" />
+					<StackPanel Orientation="Horizontal">
+						<TextBlock Text="{Binding Key}" />
+						<TextBlock Text="{ReflectionBinding Cache.Count, StringFormat='{} ({0})'}" />
+					</StackPanel>
 				</DataTemplate>
 			</ListBox.ItemTemplate>
 		</ListBox>
-		<DataGrid Grid.Row="1" Grid.Column="1" ItemsSource="{Binding SelectedContacts}" AutoGenerateColumns="true"
-				  HorizontalAlignment="Stretch"
-				  VerticalAlignment="Stretch">
-			
+		<DataGrid x:Name="Contacts"
+			      Grid.Row="1" Grid.Column="1"
+				  ItemsSource="{Binding SelectedContacts}"
+				  IsReadOnly="True"
+				  AutoGenerateColumns="true">
 		</DataGrid>
 	</Grid>
 

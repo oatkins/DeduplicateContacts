@@ -69,7 +69,7 @@ public static class Authorization
 
         return cacheHelper;
     }
-    public static async Task<AuthenticationResult?> AcquireAuthorizationAsync(IntPtr parentWindowHandle)
+    public static async Task<AuthenticationResult?> AcquireAuthorizationAsync(IntPtr parentWindowHandle, CancellationToken cancellationToken)
     {
         var app = DeduplicateContactsApp;
 
@@ -83,7 +83,7 @@ public static class Authorization
         try
         {
             authResult = await app.AcquireTokenSilent(_scopes, firstAccount)
-                .ExecuteAsync();
+                .ExecuteAsync(cancellationToken);
         }
         catch (MsalUiRequiredException ex)
         {
@@ -97,7 +97,7 @@ public static class Authorization
                     .WithAccount(firstAccount)
                     .WithParentActivityOrWindow(parentWindowHandle)
                     .WithPrompt(Prompt.SelectAccount)
-                    .ExecuteAsync();
+                    .ExecuteAsync(cancellationToken);
             }
             catch (MsalException msalex)
             {
