@@ -1,28 +1,30 @@
 ﻿using System.Runtime.CompilerServices;
-using Microsoft.Graph;
-using Microsoft.Graph.Me.Contacts;
-using Microsoft.Graph.Models;
+using Microsoft.Graph.Beta;
+using Microsoft.Graph.Beta.Me.Contacts;
+using Microsoft.Graph.Beta.Models;
 using Microsoft.Identity.Client;
 using Microsoft.Kiota.Abstractions;
 using Microsoft.Kiota.Abstractions.Authentication;
 
 namespace DeduplicateContacts;
 
-public record ContactSummary(string? DisplayName, string? EmailAddresses, string? Phone, string? HomePhone, string? LastName, string? FirstName, string Id, string ParentFolderId, DateTimeOffset? CreatedDate, DateTimeOffset? UpdatedDate)
+public record ContactSummary(string? DisplayName, string? EmailAddresses, string? Phone, string? LastName, string? FirstName, string? Categories, string Id, string ParentFolderId, DateTimeOffset? CreatedDate, DateTimeOffset? UpdatedDate)
 {
+    public string? Folder { get; init; }
+
     public ContactSummary(Contact c)
         : this(
               c.DisplayName,
               c.EmailAddresses == null ? null : string.Join(", ", c.EmailAddresses.Select(x => x.Address)),
-              c.MobilePhone,
-              c.HomePhones == null ? null : string.Join(", ", c.HomePhones),
+              c.Phones == null ? null : string.Join(", ", c.Phones.Select(x => x.Number)),
               c.Surname,
               c.GivenName,
+              c.Categories == null ? null : string.Join(", ", c.Categories),
               c.Id ?? string.Empty,
               c.ParentFolderId ?? string.Empty,
               c.CreatedDateTime,
               c.LastModifiedDateTime)
-    { 
+    {
     }
 }
 
@@ -50,18 +52,20 @@ public class Contacts(AuthenticationResult authenticationResult)
 
     public async IAsyncEnumerable<ContactSummary> GetContactsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        var categories = await _client.Me.Outlook.MasterCategories.GetAsync(null, cancellationToken);
+
         var folders = await _client.Me.ContactFolders.GetAsync(null, cancellationToken);
 
         var requests = from f in folders?.Value ?? []
-                       select _client.Me.Contacts.WithUrl($"{_client.RequestAdapter.BaseUrl}/me/contactfolders/{f.Id}/contacts");
+                       select (Request: _client.Me.Contacts.WithUrl($"{_client.RequestAdapter.BaseUrl}/me/contactfolders/{f.Id}/contacts"), Folder: f.DisplayName);
 
-        requests = requests.Prepend(_client.Me.Contacts);
+        requests = requests.Prepend((_client.Me.Contacts, null));
 
         foreach (var request in requests)
         {
-            await foreach (var contact in GetContactsAsync(request, cancellationToken))
+            await foreach (var contact in GetContactsAsync(request.Request, cancellationToken))
             {
-                yield return contact;
+                yield return contact with { Folder = request.Folder };
             }
         }
     }

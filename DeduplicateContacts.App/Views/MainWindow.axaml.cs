@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using Avalonia.Controls;
 using DeduplicateContacts.App.ViewModels;
-using Microsoft.Graph.Models;
 
 namespace DeduplicateContacts.App.Views;
 
@@ -12,6 +11,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Loaded += MainWindowLoaded;
+
+        
     }
 
     private void MainWindowLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

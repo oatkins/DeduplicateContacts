@@ -27,7 +27,7 @@ public static class Authorization
     private const string _graphAPIEndpoint = "https://graph.microsoft.com/v1.0/me";
 
     //Set the scope for API call to user.read
-    private static readonly string[] _scopes = ["user.read", "Contacts.ReadWrite"];
+    private static readonly string[] _scopes = ["user.read", "Contacts.ReadWrite", "MailboxSettings.ReadWrite"];
 
     public static IPublicClientApplication DeduplicateContactsApp => _deduplicateContactsApp;
 
