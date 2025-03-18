@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Client.Broker;
 using Microsoft.Identity.Client.Extensions.Msal;
@@ -99,14 +99,10 @@ public static class Authorization
                     .WithPrompt(Prompt.SelectAccount)
                     .ExecuteAsync(cancellationToken);
             }
-            catch (MsalException msalex)
+            catch (MsalException)
             {
                 throw;
             }
-        }
-        catch (Exception ex)
-        {
-            throw;
         }
 
         return authResult;
